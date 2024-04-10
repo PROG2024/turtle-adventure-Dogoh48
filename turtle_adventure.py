@@ -243,13 +243,6 @@ class Enemy(TurtleGameElement):
             (self.y - self.size/2 < self.game.player.y < self.y + self.size/2)
         )
 
-
-# TODO
-# * Define your enemy classes
-# * Implement all methods required by the GameElement abstract class
-# * Define enemy's update logic in the update() method
-# * Check whether the player hits this enemy, then call the
-#   self.game.game_over_lose() method in the TurtleAdventureGame class.
 class RandomWalkEnemy(Enemy):
     """
     Enemy that walks randomly on the screen.
