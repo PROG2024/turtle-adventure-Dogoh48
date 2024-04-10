@@ -290,7 +290,7 @@ class ChasingEnemy(Enemy):
                  size: int,
                  color: str):
         super().__init__(game, size, color)
-        self.__speed = 3
+        self.__speed = 4
 
     def create(self) -> None:
         self.__id = self.canvas.create_oval(0, 0, 0, 0, fill=self.color)
@@ -368,6 +368,53 @@ class FencingEnemy(Enemy):
     def delete(self) -> None:
         pass
 
+class TeleportingEnemy(Enemy):
+    """
+    Enemy that teleports in front of the player's direction.
+    """
+
+    def __init__(self,
+                 game: "TurtleAdventureGame",
+                 size: int,
+                 color: str,
+                 teleport_distance: int,
+                 teleport_cooldown: int):
+        super().__init__(game, size, color)
+        self.__teleport_distance = teleport_distance
+        self.__teleport_cooldown = teleport_cooldown
+        self.__teleport_timer = 0
+
+    def create(self) -> None:
+        self.__id = self.canvas.create_oval(0, 0, 0, 0, fill=self.color)
+
+    def update(self) -> None:
+        if self.hits_player():
+            self.game.game_over_lose()
+        if self.__teleport_timer > 0:
+            self.__teleport_timer -= 1
+        if self.__teleport_timer == 0:
+            player_x, player_y = self.game.player.x, self.game.player.y
+            waypoint_x, waypoint_y = self.game.waypoint.x, self.game.waypoint.y
+            direction_vector_x = waypoint_x - player_x
+            direction_vector_y = waypoint_y - player_y
+            magnitude = math.sqrt(direction_vector_x ** 2 + direction_vector_y ** 2)
+            if magnitude != 0:
+                direction_vector_x /= magnitude
+                direction_vector_y /= magnitude
+            self.x = player_x + self.__teleport_distance * direction_vector_x
+            self.y = player_y + self.__teleport_distance * direction_vector_y
+            self.__teleport_timer = self.__teleport_cooldown
+
+    def render(self) -> None:
+        self.canvas.coords(self.__id,
+                           self.x - self.size / 2,
+                           self.y - self.size / 2,
+                           self.x + self.size / 2,
+                           self.y + self.size / 2)
+
+    def delete(self) -> None:
+        self.canvas.delete(self.__id)
+
 class EnemyGenerator:
     """
     An EnemyGenerator instance is responsible for creating enemies of various
@@ -388,7 +435,7 @@ class EnemyGenerator:
             self.__game.after(0, self.create_random_walk_enemy)
         self.__game.after(0, self.create_chasing_enemy)
         self.__game.after(0, self.create_fencing_enemy)
-        self.__game.after(0, self.create_fireball_blaster)
+        self.__game.after(0, self.create_teleporting_enemy)
 
     @property
     def game(self) -> "TurtleAdventureGame":
@@ -434,13 +481,22 @@ class EnemyGenerator:
         Create a FencingEnemy that roam around waypoint
         """
         home_x, home_y = self.game.home.x, self.game.home.y
-        opposite_x = self.game.screen_width - home_x
-        opposite_y = self.game.screen_height - home_y
         enemy_x = home_x - 50
         enemy_y = home_y + 50
         enemy = FencingEnemy(self.__game, size=20, color="orange")
         enemy.x = enemy_x
         enemy.y = enemy_y
+        self.game.add_element(enemy)
+        self.__enemy_count += 1
+
+    def create_teleporting_enemy(self):
+        """
+        Create a TeleportingEnemy.
+        """
+        teleport_distance = 70
+        enemy = TeleportingEnemy(self.__game, size=20, color="red", teleport_distance=teleport_distance, teleport_cooldown=60)
+        enemy.x = random.randint(0, self.game.screen_width)
+        enemy.y = random.randint(0, self.game.screen_height)
         self.game.add_element(enemy)
         self.__enemy_count += 1
 
